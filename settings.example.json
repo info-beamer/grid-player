@@ -1,0 +1,11 @@
+{
+    "audio": true,
+    "grid": {
+        "width": 2,
+        "height": 2 
+    },
+    "screen": {
+        "width": 1920,
+        "height": 1080
+    }
+}

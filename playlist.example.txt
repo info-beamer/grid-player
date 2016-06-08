@@ -1,0 +1,2 @@
+test.jpg,10
+test.mp4,30.5
