@@ -87,10 +87,6 @@ end
 
 local layout = Layout()
 
-local x = tonumber(sys.get_env "GRID_X" or error "INFOBEAMER_ENV_GRID_X unset")
-local y = tonumber(sys.get_env "GRID_Y" or error "INFOBEAMER_ENV_GRID_Y unset")
-layout.set_grid_pos(x, y)
-
 local audio = false
 
 util.file_watch("settings.json", function(raw)
@@ -99,6 +95,10 @@ util.file_watch("settings.json", function(raw)
     layout.set_resolution(settings.screen.width, settings.screen.height)
     audio = settings.audio
 end)
+
+local x = tonumber(sys.get_env "GRID_X" or error "INFOBEAMER_ENV_GRID_X unset")
+local y = tonumber(sys.get_env "GRID_Y" or error "INFOBEAMER_ENV_GRID_Y unset")
+layout.set_grid_pos(x, y)
 
 local Image = {
     slot_time = function(self)
