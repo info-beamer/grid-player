@@ -263,10 +263,21 @@ local playlist = Playlist()
 util.file_watch("playlist.txt", function(raw)
     local items = {}
     for filename, duration in raw:gmatch("([^,]+),([^\n]+)\n") do
+        local duration = tonumber(duration)
+        local min_duration = 2 * PREPARE_TIME
+        if duration < min_duration then
+            error(string.format(
+                "duration for item %s is too short. must be at least %d",
+                filename, min_duration
+            ))
+        end
         items[#items+1] = {
             filename = filename;
             duration = tonumber(duration);
         }
+    end
+    if #items == 1 then
+        error "please add at least 2 items to your playlist"
     end
     playlist.set(items)
 end)

@@ -35,6 +35,9 @@ Make sure that you copy all referenced images and videos as well as the
 playlist.txt file to all devices. The file *must* be identical on all
 devices, otherwise synchonization won't work.
 
+Right now a playlist must contain at least two items. You are of course
+free to reuse the same playlist line twice.
+
 Setting up the screens
 ----------------------
 
