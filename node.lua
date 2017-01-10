@@ -1,5 +1,4 @@
 -- License: BSD 2 clause (see LICENSE.txt)
-
 gl.setup(NATIVE_WIDTH, NATIVE_HEIGHT)
 
 util.noglobals()
@@ -16,6 +15,7 @@ local VIDEO_PRELOAD_TIME = .5 -- seconds
 -------------------------------------------------------------
 
 local json = require "json"
+local matrix = require "matrix"
 local font = resource.load_font "silkscreen.ttf"
 local raw = sys.get_ext "raw_video"
 local min, max = math.min, math.max
@@ -28,10 +28,17 @@ if not CONTENTS['playlist.txt'] then
     error "playlist.txt missing. Please consult README.txt"
 end
 
-local function Layout()
+local function clamp(v, min, max)
+    return math.max(min, math.min(max, v))
+end
+
+local function round(v)
+    return math.floor(v+.5)
+end
+
+local function Layout(screen)
     local grid_x, grid_y = 1, 1
     local grid_w, grid_h = 1, 1
-    local screen_w, screen_h = 1920, 1080
 
     local function set_grid_size(w, h)
         grid_w, grid_h = w, h
@@ -44,11 +51,8 @@ local function Layout()
         grid_x, grid_y = x, y
     end
 
-    local function set_resolution(w, h)
-        screen_w, screen_h = w, h
-    end
-
     local function fit(w, h)
+        local screen_w, screen_h = screen.size()
         local total_w, total_h = screen_w * grid_w, screen_h * grid_h
 
         -- get screen coordinates for the selected screen
@@ -61,10 +65,14 @@ local function Layout()
 
         -- find out global coordinates for the current screen
         local px1, py1, px2, py2 = max(sx1, x1), max(sy1, y1), min(sx2, x2), min(sy2, y2)
-        local partial_w, partial_h = px2 - px1, py2 - py1
 
         -- calculate texture coordinates into the source.
         local tx1, ty1, tx2, ty2 = 1/fitted_w*(px1-x1)*w, 1/fitted_h*(py1-y1)*h, 1/fitted_w*(px2-x1)*w, 1/fitted_h*(py2-y1)*h
+        tx1 = clamp(tx1, 0, w)
+        ty1 = clamp(ty1, 0, h)
+
+        tx2 = clamp(tx2, 0, w)
+        ty2 = clamp(ty2, 0, h)
 
         return {
             -- for drawing raw videos
@@ -79,21 +87,93 @@ local function Layout()
     return {
         set_grid_size = set_grid_size;
         set_grid_pos = set_grid_pos;
-        set_resolution = set_resolution;
 
         fit = fit;
     }
 end
 
-local layout = Layout()
+local function Screen()
+    local rotation = 0
+    local is_portrait = false
+    local gl_transform, raw_transform
+
+    local w, h = NATIVE_WIDTH, NATIVE_HEIGHT
+
+    local function set_rotation(new_rotation)
+        rotation = new_rotation
+        is_portrait = rotation == 90 or rotation == 270
+
+        gl.setup(w, h)
+        gl_transform = util.screen_transform(rotation)
+
+        if rotation == 0 then
+            raw_transform = matrix.identity()
+        elseif rotation == 90 then
+            raw_transform = matrix.trans(w, 0) *
+                            matrix.rotate(rotation)
+        elseif rotation == 180 then
+            raw_transform = matrix.trans(w, h) *
+                            matrix.rotate(rotation)
+        elseif rotation == 270 then
+            raw_transform = matrix.trans(0, h) *
+                            matrix.rotate(rotation)
+        else
+            return error(string.format("cannot rotate by %d degree", rotation))
+        end
+    end
+
+    local function draw_video(vid, x1, y1, x2, y2)
+        local tx1, ty1 = raw_transform(x1, y1)
+        local tx2, ty2 = raw_transform(x2, y2)
+        local x1, y1, x2, y2 = round(math.min(tx1, tx2)),
+                               round(math.min(ty1, ty2)),
+                               round(math.max(tx1, tx2)),
+                               round(math.max(ty1, ty2))
+        if x1 >= 0 and x2 <= w and
+           y1 >= 0 and y2 <= h then
+            return vid:target(x1, y1, x2, y2):rotate(rotation)
+        else
+            print "offscreen"
+        end
+    end
+
+    local function draw_image(img, x1, y1, x2, y2)
+        return img:draw(x1, y1, x2, y2)
+    end
+
+    local function frame_setup()
+        return gl_transform()
+    end
+
+    local function size()
+        if is_portrait then
+            return h, w
+        else
+            return w, h
+        end
+    end
+
+    set_rotation(0)
+
+    return {
+        set_rotation = set_rotation;
+        frame_setup = frame_setup;
+        draw_image = draw_image;
+        draw_video = draw_video;
+        size = size;
+    }
+end
+
+local screen = Screen()
+local layout = Layout(screen)
 
 local audio = false
 
 util.file_watch("settings.json", function(raw)
     local settings = json.decode(raw)
     layout.set_grid_size(settings.grid.width, settings.grid.height)
-    layout.set_resolution(settings.screen.width, settings.screen.height)
-    audio = settings.audio
+    screen.set_rotation(settings.rotation or 0)
+    audio = settings.audio or false
 end)
 
 local x = tonumber(sys.get_env "GRID_X" or error "INFOBEAMER_ENV_GRID_X unset")
@@ -110,7 +190,7 @@ local Image = {
     tick = function(self, now)
         local state, w, h = self.obj:state()
         local l = layout.fit(w, h)
-        self.obj:draw(l.offset.x1, l.offset.y1, l.offset.x2, l.offset.y2, 0.9)
+        screen.draw_image(self.obj, l.offset.x1, l.offset.y1, l.offset.x2, l.offset.y2)
     end;
     stop = function(self)
         if self.obj then
@@ -154,8 +234,8 @@ local Video = {
 ]]
         else
             local l = layout.fit(w, h)
-            self.obj:target(l.screen.x1, l.screen.y1, l.screen.x2, l.screen.y2)
             self.obj:source(l.source.x1, l.source.y1, l.source.x2, l.source.y2)
+            screen.draw_video(self.obj, l.screen.x1, l.screen.y1, l.screen.x2, l.screen.y2)
         end
     end;
     stop = function(self)
@@ -283,5 +363,6 @@ util.file_watch("playlist.txt", function(raw)
 end)
 
 function node.render()
+    screen.frame_setup()
     playlist.tick(os.time())
 end
