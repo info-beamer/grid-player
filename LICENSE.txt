@@ -1,4 +1,4 @@
-Copyright (c) 2016, Florian Wesch <fw@dividuum.de>
+Copyright (c) 2016,2017 Florian Wesch <fw@dividuum.de>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
