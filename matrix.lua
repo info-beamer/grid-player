@@ -30,7 +30,7 @@ matrix.identity = function()
 end
 
 matrix.trans = function (dx,dy)
-	return setmetatable({
+    return setmetatable({
         v11 = 1; v12 = 0; v13 = dx;
         v21 = 0; v22 = 1; v23 = dy;
         v31 = 0; v32 = 0; v33 =  1;
@@ -39,7 +39,7 @@ end
 
 matrix.rotate = function(rot)
     rot = rot / 180 * pi
-	return setmetatable({
+    return setmetatable({
         v11 = math.cos(rot); v12 = -math.sin(rot); v13 = 0;
         v21 = math.sin(rot); v22 =  math.cos(rot); v23 = 0;
         v31 = 0            ; v32 = 0             ; v33 = 1;
@@ -47,7 +47,7 @@ matrix.rotate = function(rot)
 end
 
 matrix.scale = function (sx,sy)
-	return setmetatable({
+    return setmetatable({
         v11 = sx; v12 =  0; v13 = 0;
         v21 =  0; v22 = sy; v23 = 0;
         v31 =  0; v32 =  0; v33 = 1;
