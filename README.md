@@ -78,7 +78,7 @@ audio output. By default info-beamer uses the analog output
 of the Pi.
 
 If you want HDMI audio instead of using the analogue audio
-output, set the INFOBEAMER_AUDIO_TARGET=hdmi environment
+output, set the `INFOBEAMER_AUDIO_TARGET=hdmi` environment
 variable before starting info-beamer.
 
 Starting Playback
@@ -86,10 +86,10 @@ Starting Playback
 
 On each device, start info-beamer like this
 
-INFOBEAMER_ENV_GRID_X=<x> INFOBEAMER_ENV_GRID_Y=<y> info-beamer .
+    INFOBEAMER_ENV_GRID_X=<x> INFOBEAMER_ENV_GRID_Y=<y> info-beamer .
 
-where <x> and <y> is the position of the screen inside the
-defined grid in settings.json. The top left screen is at
+where `<x>` and `<y>` is the position of the screen inside
+the defined grid in settings.json. The top left screen is at
 x=1, y=1.
 
 It might take a moment before playback starts. You'll see a
