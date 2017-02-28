@@ -81,7 +81,7 @@
         "type": "list",
         "itemname": "Device",
         "items": [{
-            "title": "Grid X",
+            "title": "Grid X Position",
             "ui_width": 3,
             "hint": "Horizontal position within the grid. Must be between 1 and *Grid Width* specified above. 1 is the left-most screen.",
             "name": "x",
@@ -96,7 +96,7 @@
             ],
             "default": 0
         }, {
-            "title": "Grid Y",
+            "title": "Grid Y Position",
             "ui_width": 3,
             "hint": "Vertical position within the grid. Must be between 1 and *Grid Height* specified above. 1 is the top-most screen.",
             "name": "y",
