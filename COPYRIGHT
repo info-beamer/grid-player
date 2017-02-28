@@ -23,13 +23,12 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
+This project includes third party work:
 
-Additional Terms:
+package-header.jpg:
+    public domain
+    https://en.wikipedia.org/wiki/The_Crystal_Palace#/media/File:Crystal.Palace.1851.png
 
-    silkscreen.ttf from http://kottke.org/plus/type/silkscreen/
-
-    "The Silkscreen type family is absolutely free for personal or
-    corporate use. You can use it for any project you want (Web,
-    print, or otherwise) without owing anyone a single penny."
-
-
+silkscreen.ttf
+    SIL Open Font License (OFL)
+    http://kottke.org/plus/type/silkscreen/

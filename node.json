@@ -1,0 +1,120 @@
+{
+    "name": "Grid Player",
+    "optional": [
+        ".*example.*",
+        "COPYRIGHT",
+        ".*md$",
+        "package.png",
+        "empty.png",
+        "package-header.jpg"
+    ],
+    "options": [
+    {
+        "title": "What to display",
+        "type": "section"
+    }, {
+        "title": "Playlist",
+        "name": "playlist",
+        "type": "list",
+        "itemname": "Item",
+        "items": [{
+            "title": "Asset",
+            "ui_width": 5,
+            "name": "file",
+            "type": "resource",
+            "valid": ["image", "video"],
+            "default": "empty.png"
+        }, {
+            "title": "Play time",
+            "ui_width": 3,
+            "name": "duration",
+            "type": "duration",
+            "hint": "How long should this item be displayed on screen. For videos, use their duration",
+            "default": 5
+        }]
+    },
+
+    {
+        "title": "Layout Configuration",
+        "type": "section"
+    }, {
+        "title": "Grid Width",
+        "ui_width": 3,
+        "hint": "Number of screens in the horizontal direction.",
+        "name": "grid_w",
+        "type": "integer",
+        "default": 2
+    }, {
+        "title": "Grid Height",
+        "ui_width": 3,
+        "hint": "Number of screens in the vertical direction.",
+        "name": "grid_h",
+        "type": "integer",
+        "default": 2
+    }, {
+        "title": "Rotation",
+        "ui_width": 4,
+        "name": "rotation",
+        "type": "select",
+        "hint": "Are the invdividual screens of the video wall rotated? If so, specify the clockwise rotation",
+        "options": [
+            [0, "Not rotated (default)"],
+            [90, "90°"],
+            [180, "180°"],
+            [270, "270°"]
+        ],
+        "default": 0
+    }, {
+        "title": "Audio",
+        "ui_width": 2,
+        "name": "audio",
+        "type": "boolean",
+        "default": false
+    }, 
+
+    {
+        "title": "Device Assignment",
+        "type": "section"
+    }, {
+        "title": "Devices",
+        "name": "devices",
+        "type": "list",
+        "itemname": "Device",
+        "items": [{
+            "title": "Grid X",
+            "ui_width": 3,
+            "hint": "Horizontal position within the grid. Must be between 1 and *Grid Width* specified above. 1 is the left-most screen.",
+            "name": "x",
+            "type": "select",
+            "options": [
+                [1, "1"],
+                [2, "2"],
+                [3, "3"],
+                [4, "4"],
+                [5, "5"],
+                [6, "6"]
+            ],
+            "default": 0
+        }, {
+            "title": "Grid Y",
+            "ui_width": 3,
+            "hint": "Vertical position within the grid. Must be between 1 and *Grid Height* specified above. 1 is the top-most screen.",
+            "name": "y",
+            "type": "select",
+            "options": [
+                [1, "1"],
+                [2, "2"],
+                [3, "3"],
+                [4, "4"],
+                [5, "5"],
+                [6, "6"]
+            ],
+            "default": 0
+        }, {
+            "title": "Device",
+            "ui_width": 6,
+            "name": "serial",
+            "type": "device"
+        }]
+    }]
+}

@@ -20,14 +20,6 @@ local font = resource.load_font "silkscreen.ttf"
 local raw = sys.get_ext "raw_video"
 local min, max = math.min, math.max
 
-if not CONTENTS['settings.json'] then
-    error "settings.json missing. Please consult README.txt"
-end
-
-if not CONTENTS['playlist.txt'] then
-    error "playlist.txt missing. Please consult README.txt"
-end
-
 local function clamp(v, min, max)
     return math.max(min, math.min(max, v))
 end
@@ -166,19 +158,39 @@ end
 
 local screen = Screen()
 local layout = Layout(screen)
-
 local audio = false
 
-util.file_watch("settings.json", function(raw)
-    local settings = json.decode(raw)
-    layout.set_grid_size(settings.grid.width, settings.grid.height)
-    screen.set_rotation(settings.rotation or 0)
-    audio = settings.audio or false
-end)
+if CONTENTS['settings.json'] then
+    util.file_watch("settings.json", function(raw)
+        local settings = json.decode(raw)
+        layout.set_grid_size(settings.grid.width, settings.grid.height)
+        screen.set_rotation(settings.rotation or 0)
+        audio = settings.audio or false
+    end)
 
-local x = tonumber(sys.get_env "GRID_X" or error "INFOBEAMER_ENV_GRID_X unset")
-local y = tonumber(sys.get_env "GRID_Y" or error "INFOBEAMER_ENV_GRID_Y unset")
-layout.set_grid_pos(x, y)
+    local x = tonumber(sys.get_env "GRID_X" or error "INFOBEAMER_ENV_GRID_X unset")
+    local y = tonumber(sys.get_env "GRID_Y" or error "INFOBEAMER_ENV_GRID_Y unset")
+    layout.set_grid_pos(x, y)
+elseif CONTENTS['config.json'] then
+    print "loading settings from config.json"
+    util.file_watch("config.json", function(raw)
+        print "foo"
+        local config = json.decode(raw)
+        layout.set_grid_size(config.grid_w, config.grid_h)
+        screen.set_rotation(config.rotation)
+        audio = config.audio
+
+        local serial = sys.get_env "SERIAL"
+        for idx = 1, #config.devices do
+            local device = config.devices[idx]
+            if device.serial == serial then
+                layout.set_grid_pos(device.x, device.y)
+            end
+        end
+    end)
+else
+    error "no settings.json found. Please consult STANDALONE.md"
+end
 
 local Image = {
     slot_time = function(self)
@@ -340,27 +352,65 @@ end
 
 local playlist = Playlist()
 
-util.file_watch("playlist.txt", function(raw)
-    local items = {}
-    for filename, duration in raw:gmatch("([^,]+),([^\n]+)\n") do
-        local duration = tonumber(duration)
-        local min_duration = 2 * PREPARE_TIME
-        if duration < min_duration then
-            error(string.format(
-                "duration for item %s is too short. must be at least %d",
-                filename, min_duration
-            ))
-        end
-        items[#items+1] = {
-            filename = filename;
-            duration = tonumber(duration);
+local function prepare_playlist(playlist)
+    if #playlist >= 2 then
+        return playlist
+    elseif #playlist == 1 then
+        -- only a single item? Copy it
+        local item = playlist[1]
+        playlist[#playlist+1] = {
+            filename = item.filename,
+            duration = item.duration,
+        }
+    else
+        playlist[#playlist+1] = {
+            filename = "blank.png",
+            duration = 2,
+        }
+        playlist[#playlist+1] = {
+            filename = "blank.png",
+            duration = 2,
         }
     end
-    if #items == 1 then
-        error "please add at least 2 items to your playlist"
-    end
-    playlist.set(items)
-end)
+    return playlist
+end
+
+
+if CONTENTS['playlist.txt'] then
+    util.file_watch("playlist.txt", function(raw)
+        local items = {}
+        for filename, duration in raw:gmatch("([^,]+),([^\n]+)\n") do
+            local duration = tonumber(duration)
+            local min_duration = 2 * PREPARE_TIME
+            if duration < min_duration then
+                error(string.format(
+                    "duration for item %s is too short. must be at least %d",
+                    filename, min_duration
+                ))
+            end
+            items[#items+1] = {
+                filename = filename;
+                duration = tonumber(duration);
+            }
+        end
+        playlist.set(prepare_playlist(items))
+    end)
+elseif CONTENTS['config.json'] then
+    util.file_watch("config.json", function(raw)
+        local config = json.decode(raw)
+        local items = {}
+        for idx = 1, #config.playlist do
+            local item = config.playlist[idx]
+            items[#items+1] = {
+                filename = item.file.asset_name,
+                duration = item.duration,
+            }
+        end
+        playlist.set(prepare_playlist(items))
+    end)
+else
+    error "no playlist.txt found. Please consult STANDALONE.md"
+end
 
 function node.render()
     screen.frame_setup()
