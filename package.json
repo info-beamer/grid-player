@@ -2,5 +2,6 @@
     "name": "Video Wall Image/Video Player",
     "author": "Florian Wesch <fw@dividuum.de>",
     "desc": "Displays images and videos on multiple screens arranged in a grid.",
-    "repository": "https://github.com/info-beamer/grid-player"
+    "repository": "https://github.com/info-beamer/grid-player",
+    "version": "0.1"
 }
