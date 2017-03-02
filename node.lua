@@ -174,7 +174,6 @@ if CONTENTS['settings.json'] then
 elseif CONTENTS['config.json'] then
     print "loading settings from config.json"
     util.file_watch("config.json", function(raw)
-        print "foo"
         local config = json.decode(raw)
         layout.set_grid_size(config.grid_w, config.grid_h)
         screen.set_rotation(config.rotation)
