@@ -196,7 +196,7 @@ local Image = {
         return self.duration
     end;
     prepare = function(self)
-        self.obj = resource.load_image(self.filename)
+        self.obj = resource.load_image(self.file:copy())
     end;
     tick = function(self, now)
         local state, w, h = self.obj:state()
@@ -220,7 +220,7 @@ local Video = {
     tick = function(self, now)
         if not self.obj then
             self.obj = raw.load_video{
-                file = self.filename;
+                file = self.file:copy();
                 paused = true;
                 audio = audio;
             }
@@ -282,14 +282,14 @@ local function Playlist()
         for idx = 1, #items do
             local item = items[idx]
             if item.t_prepare <= now and item.state == "waiting" then
-                print(now, "preparing " .. item.filename)
+                print(now, "preparing", item.file)
                 item:prepare()
                 item.state = "prepared"
             elseif item.t_start <= now and item.state == "prepared" then
-                print(now, "running " .. item.filename)
+                print(now, "running", item.file)
                 item.state = "running"
             elseif item.t_end <= now and item.state == "running" then
-                print(now, "resetting " .. item.filename)
+                print(now, "resetting", item.file)
                 item:stop()
                 calc_start(idx, now)
                 item.state = "waiting"
@@ -332,6 +332,7 @@ local function Playlist()
             end
             item.epoch_offset = total_duration
             item.state = "waiting"
+            item.file = resource.open_file(item.filename)
             total_duration = total_duration + item:slot_time()
         end
 
@@ -341,6 +342,8 @@ local function Playlist()
         for idx = 1, #new_items do
             calc_start(idx, now)
         end
+
+        node.gc()
     end
 
     return {
