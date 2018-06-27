@@ -17,7 +17,6 @@ local VIDEO_PRELOAD_TIME = .5 -- seconds
 local json = require "json"
 local matrix = require "matrix"
 local font = resource.load_font "silkscreen.ttf"
-local raw = sys.get_ext "raw_video"
 local min, max = math.min, math.max
 
 local function clamp(v, min, max)
@@ -37,10 +36,7 @@ local function Layout(screen)
     end
 
     local function set_grid_pos(x, y)
-        if x < 1 or x > grid_w or y < 1 or y > grid_h then
-            error(("invalid grid position %d,%d. It's outside the grid defined in settings.json"):format(x, y))
-        end
-        grid_x, grid_y = x, y
+        grid_x, grid_y = clamp(x, 1, grid_w), clamp(y, 1, grid_h)
     end
 
     local function fit(w, h)
@@ -219,8 +215,9 @@ local Video = {
     end;
     tick = function(self, now)
         if not self.obj then
-            self.obj = raw.load_video{
+            self.obj = resource.load_video{
                 file = self.file:copy();
+                raw = true,
                 paused = true;
                 audio = audio;
             }
@@ -377,8 +374,70 @@ local function prepare_playlist(playlist)
     return playlist
 end
 
+local function Stream()
+    local vid
+    local url
+
+    local function stop()
+        if vid then
+            vid:dispose()
+        end
+        vid = nil
+    end
+
+    local function start()
+        vid = resource.load_video{
+            file = url,
+            raw = true,
+        }
+    end
+
+    local function set(stream_url)
+        if stream_url == "" then
+            url = nil
+            stop()
+            return
+        end
+        if stream_url == url then
+            return
+        end
+        stop()
+        url = stream_url
+        start()
+    end
+
+    local function tick()
+        if not vid then
+            return
+        end
+        local state, w, h = vid:state()
+        if state == "loaded" then
+            local l = layout.fit(w, h)
+            vid:source(l.source.x1, l.source.y1, l.source.x2, l.source.y2)
+            screen.draw_video(vid, l.screen.x1, l.screen.y1, l.screen.x2, l.screen.y2)
+        elseif state == "finished" or state == "error" then
+            stop()
+            start()
+        end
+    end
+
+    local function has_stream()
+        return not not url
+    end
+
+    return {
+        set = set;
+        tick = tick;
+        has_stream = has_stream;
+    }
+end
+
+local stream = Stream()
+
+local mode
 
 if CONTENTS['playlist.txt'] then
+    mode = "playlist"
     util.file_watch("playlist.txt", function(raw)
         local items = {}
         for filename, duration in raw:gmatch("([^,]+),([^\n]+)\n") do
@@ -398,8 +457,7 @@ if CONTENTS['playlist.txt'] then
         playlist.set(prepare_playlist(items))
     end)
 elseif CONTENTS['config.json'] then
-    util.file_watch("config.json", function(raw)
-        local config = json.decode(raw)
+    util.json_watch("config.json", function(config)
         local items = {}
         for idx = 1, #config.playlist do
             local item = config.playlist[idx]
@@ -409,6 +467,7 @@ elseif CONTENTS['config.json'] then
             }
         end
         playlist.set(prepare_playlist(items))
+        stream.set(config.stream)
     end)
 else
     error "no playlist.txt found. Please consult STANDALONE.md"
@@ -416,5 +475,9 @@ end
 
 function node.render()
     screen.frame_setup()
-    playlist.tick(os.time())
+    if stream.has_stream() then
+        stream.tick()
+    else
+        playlist.tick(os.time())
+    end
 end

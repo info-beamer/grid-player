@@ -3,5 +3,8 @@
     "author": "Florian Wesch <fw@info-beamer.com>",
     "desc": "Displays images and videos on multiple screens arranged in a grid.",
     "repository": "https://github.com/info-beamer/grid-player",
-    "version": "2.0"
+    "runtime": {
+        "outside_sources": true
+    },
+    "version": "3.0"
 }
