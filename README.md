@@ -37,7 +37,8 @@ Since there is no communication across devices running
 a video wall setup, synchronization is tricky. Right now
 streaming really only works if you configure a RTP multicast
 stream. You can use the "Multicast Video Streamer" to
-generate such a stream from a connected camera module. Learn more about the package at
+generate such a stream from a connected camera module.
+Learn more about the package:
 https://info-beamer.com/pkg/7314
 
 ## Standalone usage
