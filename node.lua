@@ -434,10 +434,7 @@ end
 
 local stream = Stream()
 
-local mode
-
 if CONTENTS['playlist.txt'] then
-    mode = "playlist"
     util.file_watch("playlist.txt", function(raw)
         local items = {}
         for filename, duration in raw:gmatch("([^,]+),([^\n]+)\n") do
