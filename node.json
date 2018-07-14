@@ -123,5 +123,64 @@
             "name": "serial",
             "type": "device"
         }]
-    }]
+    }],
+    "presets": {
+        "2x2": {
+            "desc": "Example 2x2 video wall",
+            "config": {
+                "playlist": [{
+                    "file": "example-asset.jpg",
+                    "duration": 10
+                }],
+                "grid_w": 2,
+                "grid_h": 2,
+                "devices": [{
+                    "x": 1, "y": 1
+                }, {
+                    "x": 2, "y": 1
+                }, {
+                    "x": 1, "y": 2
+                }, {
+                    "x": 2, "y": 2
+                }]
+            }
+        },
+        "2x2stream": {
+            "desc": "Example 2x2 video wall for streaming",
+            "config": {
+                "playlist": [],
+                "stream": "http://192.168.1.xxx/stream.sdp",
+                "grid_w": 2,
+                "grid_h": 2,
+                "devices": [{
+                    "x": 1, "y": 1
+                }, {
+                    "x": 2, "y": 1
+                }, {
+                    "x": 1, "y": 2
+                }, {
+                    "x": 2, "y": 2
+                }]
+            }
+        },
+        "3x1": {
+            "desc": "Example 3x1 vertical video wall",
+            "config": {
+                "playlist": [{
+                    "file": "example-asset.jpg",
+                    "duration": 10
+                }],
+                "grid_w": 3,
+                "grid_h": 1,
+                "rotation": 90,
+                "devices": [{
+                    "x": 1, "y": 1
+                }, {
+                    "x": 2, "y": 1
+                }, {
+                    "x": 3, "y": 1
+                }]
+            }
+        }
+    }
 }
