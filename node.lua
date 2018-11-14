@@ -389,6 +389,7 @@ local function Stream()
         vid = resource.load_video{
             file = url,
             raw = true,
+            audio = true,
         }
     end
 
