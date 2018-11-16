@@ -49,14 +49,30 @@
         "ui_width": 3,
         "hint": "Number of screens in the horizontal direction.",
         "name": "grid_w",
-        "type": "integer",
+        "type": "select",
+        "options": [
+            [1, "1"],
+            [2, "2"],
+            [3, "3"],
+            [4, "4"],
+            [5, "5"],
+            [6, "6"]
+        ],
         "default": 2
     }, {
         "title": "Grid Height",
         "ui_width": 3,
         "hint": "Number of screens in the vertical direction.",
         "name": "grid_h",
-        "type": "integer",
+        "type": "select",
+        "options": [
+            [1, "1"],
+            [2, "2"],
+            [3, "3"],
+            [4, "4"],
+            [5, "5"],
+            [6, "6"]
+        ],
         "default": 2
     }, {
         "title": "Rotation",
