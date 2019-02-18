@@ -1,16 +1,11 @@
 -- License: BSD 2 clause (see LICENSE.txt)
 gl.setup(NATIVE_WIDTH, NATIVE_HEIGHT)
 
-util.noglobals()
+util.no_globals()
 
 -- Start preloading images this many second before
 -- they are displayed.
 local PREPARE_TIME = 1 -- seconds
-
--- must be enough time to load a video and have it
--- ready in the paused state. Normally 500ms should
--- be enough.
-local VIDEO_PRELOAD_TIME = .5 -- seconds
 
 -------------------------------------------------------------
 
@@ -176,6 +171,7 @@ elseif CONTENTS['config.json'] then
         audio = config.audio
 
         local serial = sys.get_env "SERIAL"
+        layout.set_grid_pos(1, 1)
         for idx = 1, #config.devices do
             local device = config.devices[idx]
             if device.serial == serial then
@@ -209,36 +205,26 @@ local Image = {
 
 local Video = {
     slot_time = function(self)
-        return VIDEO_PRELOAD_TIME + self.duration
+        return self.duration
     end;
     prepare = function(self)
+        self.obj = resource.load_video{
+            file = self.file:copy();
+            raw = true,
+            paused = true;
+            audio = audio;
+        }
     end;
     tick = function(self, now)
-        if not self.obj then
-            self.obj = resource.load_video{
-                file = self.file:copy();
-                raw = true,
-                paused = true;
-                audio = audio;
-            }
-        end
-
-        if now < self.t_start + VIDEO_PRELOAD_TIME then
-            return
-        end
-
         self.obj:start()
         local state, w, h = self.obj:state()
 
         if state ~= "loaded" and state ~= "finished" then
             print[[
 
-.--------------------------------------------.
-  WARNING:
-  lost video frame. video is most likely out
-  of sync. increase VIDEO_PRELOAD_TIME (on all
-  devices)
-'--------------------------------------------'
+.------------------------------------------------------------.
+  WARNING: lost video frame. video is most likely out of sync.
+'------------------------------------------------------------'
 ]]
         else
             local l = layout.fit(w, h)

@@ -47,6 +47,11 @@ Have a look at the included [STANDALONE.md](STANDALONE.md)
 file to read more about how you can use this package outside
 of info-beamer hosted.
 
+## Version 4.0
+
+ * Fixed problem when switching between setups with explicitly set screen coordinates to one using defaults.
+ * Playback of video is now seamless. Note that you can't mix setups using this new version with setups using a previous version.
+
 ## Version 3.0
 
  * Added support for multicast streaming.
