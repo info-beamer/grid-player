@@ -25,6 +25,11 @@ end
 local function Layout(screen)
     local grid_x, grid_y = 1, 1
     local grid_w, grid_h = 1, 1
+    local scaling = "preserve_aspect"
+
+    local function set_scaling(new_scaling)
+        scaling = new_scaling
+    end
 
     local function set_grid_size(w, h)
         grid_w, grid_h = w, h
@@ -42,8 +47,14 @@ local function Layout(screen)
         local sx1, sy1 = screen_w * (grid_x-1), screen_h * (grid_y-1)
         local sx2, sy2 = screen_w * grid_x, screen_h * grid_y
 
-        -- scale target into available screen space
-        local x1, y1, x2, y2 = util.scale_into(total_w, total_h, w, h)
+        local x1, y1, x2, y2
+        if scaling == "preserve_aspect" then
+            -- scale target into available screen space
+            x1, y1, x2, y2 = util.scale_into(total_w, total_h, w, h)
+        else
+            x1, y1, x2, y2 = 0, 0, total_w, total_h
+        end
+
         local fitted_w, fitted_h = x2 - x1, y2 - y1
 
         -- find out global coordinates for the current screen
@@ -70,6 +81,7 @@ local function Layout(screen)
     return {
         set_grid_size = set_grid_size;
         set_grid_pos = set_grid_pos;
+        set_scaling = set_scaling;
 
         fit = fit;
     }
@@ -172,6 +184,7 @@ elseif CONTENTS['config.json'] then
 
         local serial = sys.get_env "SERIAL"
         layout.set_grid_pos(1, 1)
+        layout.set_scaling(config.scaling)
         for idx = 1, #config.devices do
             local device = config.devices[idx]
             if device.serial == serial then

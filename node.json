@@ -46,7 +46,7 @@
         "type": "section"
     }, {
         "title": "Grid Width",
-        "ui_width": 3,
+        "ui_width": 2,
         "hint": "Number of screens in the horizontal direction.",
         "name": "grid_w",
         "type": "select",
@@ -61,7 +61,7 @@
         "default": 2
     }, {
         "title": "Grid Height",
-        "ui_width": 3,
+        "ui_width": 2,
         "hint": "Number of screens in the vertical direction.",
         "name": "grid_h",
         "type": "select",
@@ -73,15 +73,26 @@
             [5, "5"],
             [6, "6"]
         ],
-        "default": 2
+        "default": 3
+    }, {
+        "title": "Scaling",
+        "ui_width": 4,
+        "name": "scaling",
+        "type": "select",
+        "hint": "How to scale your content into the available screen space",
+        "options": [
+            ["preserve_aspect", "Preserve aspect ratio"],
+            ["fill", "Fill available space"]
+        ],
+        "default": "preserve_aspect"
     }, {
         "title": "Rotation",
-        "ui_width": 4,
+        "ui_width": 2,
         "name": "rotation",
         "type": "select",
         "hint": "Are the invdividual screens of the video wall rotated? If so, specify the clockwise rotation",
         "options": [
-            [0, "Not rotated (default)"],
+            [0, "None"],
             [90, "90°"],
             [180, "180°"],
             [270, "270°"]
