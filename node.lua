@@ -363,10 +363,12 @@ local function prepare_playlist(playlist)
     else
         playlist[#playlist+1] = {
             filename = "blank.png",
+            filetype = "image",
             duration = 2,
         }
         playlist[#playlist+1] = {
             filename = "blank.png",
+            filetype = "image",
             duration = 2,
         }
     end
