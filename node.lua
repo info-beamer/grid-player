@@ -358,6 +358,7 @@ local function prepare_playlist(playlist)
         local item = playlist[1]
         playlist[#playlist+1] = {
             filename = item.filename,
+            filetype = item.filetype,
             duration = item.duration,
         }
     else
