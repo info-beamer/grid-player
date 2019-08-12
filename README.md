@@ -47,6 +47,11 @@ Have a look at the included [STANDALONE.md](STANDALONE.md)
 file to read more about how you can use this package outside
 of info-beamer hosted.
 
+## Version 5.0
+
+ * Fixed playback problems for files with .jpeg/.mkv extension. The package now uses the backend supplied file type instead
+   of using the asset's file extension.
+
 ## Version 4.0
 
  * Fixed problem when switching between setups with explicitly set screen coordinates to one using defaults.
