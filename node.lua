@@ -319,12 +319,12 @@ local function Playlist()
         for idx = 1, #new_items do
             local item = new_items[idx]
             local filename = item.filename:lower()
-            if filename:find "[.]jpg$" or filename:find "[.]png$" then
+            if item.filetype == "image" then
                 setmetatable(item, {__index = Image})
-            elseif filename:find "[.]mp4$" then
+            elseif item.filetype == "video" then
                 setmetatable(item, {__index = Video})
             else
-                return error("unsupported filename " .. filename)
+                error "unsupported filetype"
             end
             item.epoch_offset = total_duration
             item.state = "waiting"
@@ -435,6 +435,15 @@ end
 local stream = Stream()
 
 if CONTENTS['playlist.txt'] then
+    local function type_from_filename(filename)
+        if filename:find "[.]jpeg$" or filename:find "[.]jpg$" or filename:find "[.]png$" then
+            return "image"
+        elseif filename:find "[.]mp4$" then
+            return "video"
+        else
+            return error("unsupported filename " .. filename)
+        end
+    end
     util.file_watch("playlist.txt", function(raw)
         local items = {}
         for filename, duration in raw:gmatch("([^,]+),([^\n]+)\n") do
@@ -448,6 +457,7 @@ if CONTENTS['playlist.txt'] then
             end
             items[#items+1] = {
                 filename = filename;
+                filetype = type_from_filename(filename);
                 duration = tonumber(duration);
             }
         end
@@ -460,6 +470,7 @@ elseif CONTENTS['config.json'] then
             local item = config.playlist[idx]
             items[#items+1] = {
                 filename = item.file.asset_name,
+                filetype = item.file.type,
                 duration = item.duration,
             }
         end
