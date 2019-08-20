@@ -126,7 +126,7 @@ local function Screen()
                                round(math.max(ty1, ty2))
         if x1 >= 0 and x2 <= w and
            y1 >= 0 and y2 <= h then
-            return vid:target(x1, y1, x2, y2):rotate(rotation)
+            return vid:place(x1, y1, x2, y2, rotation)
         else
             print "offscreen"
         end
