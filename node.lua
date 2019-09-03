@@ -87,13 +87,13 @@ local function Screen()
             video_transform = matrix.identity()
         elseif rotation == 90 then
             video_transform = matrix.trans(w, 0) *
-                            matrix.rotate(rotation)
+                              matrix.rotate(rotation)
         elseif rotation == 180 then
             video_transform = matrix.trans(w, h) *
-                            matrix.rotate(rotation)
+                              matrix.rotate(rotation)
         elseif rotation == 270 then
             video_transform = matrix.trans(0, h) *
-                            matrix.rotate(rotation)
+                              matrix.rotate(rotation)
         else
             return error(string.format("cannot rotate by %d degree", rotation))
         end
