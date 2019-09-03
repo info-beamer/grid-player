@@ -55,26 +55,8 @@ local function Layout(screen)
             x1, y1, x2, y2 = 0, 0, total_w, total_h
         end
 
-        local fitted_w, fitted_h = x2 - x1, y2 - y1
-
-        -- find out global coordinates for the current screen
-        local px1, py1, px2, py2 = max(sx1, x1), max(sy1, y1), min(sx2, x2), min(sy2, y2)
-
-        -- calculate texture coordinates into the source.
-        local tx1, ty1, tx2, ty2 = 1/fitted_w*(px1-x1)*w, 1/fitted_h*(py1-y1)*h, 1/fitted_w*(px2-x1)*w, 1/fitted_h*(py2-y1)*h
-        tx1 = clamp(tx1, 0, w)
-        ty1 = clamp(ty1, 0, h)
-
-        tx2 = clamp(tx2, 0, w)
-        ty2 = clamp(ty2, 0, h)
-
         return {
-            -- for drawing raw videos
-            screen = {x1=px1-sx1, y1=py1-sy1, x2=px2-sx1, y2=py2-sy1};
-            source = {x1=tx1, y1=ty1, x2=tx2, y2=ty2};
-
-            -- for drawing textures
-            offset = {x1=x1-sx1, y1=y1-sy1, x2=x2-sx1, y2=y2-sy1};
+            x1=x1-sx1, y1=y1-sy1, x2=x2-sx1, y2=y2-sy1
         }
     end
 
@@ -90,7 +72,7 @@ end
 local function Screen()
     local rotation = 0
     local is_portrait = false
-    local gl_transform, raw_transform
+    local gl_transform, video_transform
 
     local w, h = NATIVE_WIDTH, NATIVE_HEIGHT
 
@@ -102,15 +84,15 @@ local function Screen()
         gl_transform = util.screen_transform(rotation)
 
         if rotation == 0 then
-            raw_transform = matrix.identity()
+            video_transform = matrix.identity()
         elseif rotation == 90 then
-            raw_transform = matrix.trans(w, 0) *
+            video_transform = matrix.trans(w, 0) *
                             matrix.rotate(rotation)
         elseif rotation == 180 then
-            raw_transform = matrix.trans(w, h) *
+            video_transform = matrix.trans(w, h) *
                             matrix.rotate(rotation)
         elseif rotation == 270 then
-            raw_transform = matrix.trans(0, h) *
+            video_transform = matrix.trans(0, h) *
                             matrix.rotate(rotation)
         else
             return error(string.format("cannot rotate by %d degree", rotation))
@@ -118,18 +100,13 @@ local function Screen()
     end
 
     local function draw_video(vid, x1, y1, x2, y2)
-        local tx1, ty1 = raw_transform(x1, y1)
-        local tx2, ty2 = raw_transform(x2, y2)
+        local tx1, ty1 = video_transform(x1, y1)
+        local tx2, ty2 = video_transform(x2, y2)
         local x1, y1, x2, y2 = round(math.min(tx1, tx2)),
                                round(math.min(ty1, ty2)),
                                round(math.max(tx1, tx2)),
                                round(math.max(ty1, ty2))
-        if x1 >= 0 and x2 <= w and
-           y1 >= 0 and y2 <= h then
-            return vid:place(x1, y1, x2, y2, rotation)
-        else
-            print "offscreen"
-        end
+        return vid:place(x1, y1, x2, y2, rotation)
     end
 
     local function draw_image(img, x1, y1, x2, y2)
@@ -206,7 +183,7 @@ local Image = {
     tick = function(self, now)
         local state, w, h = self.obj:state()
         local l = layout.fit(w, h)
-        screen.draw_image(self.obj, l.offset.x1, l.offset.y1, l.offset.x2, l.offset.y2)
+        screen.draw_image(self.obj, l.x1, l.y1, l.x2, l.y2)
     end;
     stop = function(self)
         if self.obj then
@@ -241,8 +218,7 @@ local Video = {
 ]]
         else
             local l = layout.fit(w, h)
-            self.obj:source(l.source.x1, l.source.y1, l.source.x2, l.source.y2)
-            screen.draw_video(self.obj, l.screen.x1, l.screen.y1, l.screen.x2, l.screen.y2)
+            screen.draw_video(self.obj, l.x1, l.y1, l.x2, l.y2)
         end
     end;
     stop = function(self)
