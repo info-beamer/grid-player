@@ -23,6 +23,7 @@
             "name": "file",
             "type": "resource",
             "valid": ["image", "video"],
+            "features": ["hevc"],
             "default": "empty.png"
         }, {
             "title": "Play time",

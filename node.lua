@@ -7,6 +7,12 @@ util.no_globals()
 -- they are displayed.
 local PREPARE_TIME = 1 -- seconds
 
+-- There is only one HEVC decoder slot. So videos
+-- cannot be preloaded. Instead we reserve the
+-- following number of seconds at each play slot
+-- for loading the video.
+local HEVC_LOAD_TIME = 0.5 -- seconds
+
 -------------------------------------------------------------
 
 local json = require "json"
@@ -229,6 +235,48 @@ local Video = {
     end;
 }
 
+local VideoHEVC = {
+    slot_time = function(self)
+        return self.duration + HEVC_LOAD_TIME
+    end;
+    prepare = function(self)
+    end;
+    tick = function(self, now)
+        if not self.obj then
+            self.obj = resource.load_video{
+                file = self.file:copy();
+                raw = true,
+                paused = true;
+                audio = audio;
+            }
+        end
+        if now < self.t_start + HEVC_LOAD_TIME then
+            return
+        end
+
+        self.obj:start()
+        local state, w, h = self.obj:state()
+
+        if state ~= "loaded" and state ~= "finished" then
+            print[[
+
+.------------------------------------------------------------.
+  WARNING: lost video frame. video is most likely out of sync.
+'------------------------------------------------------------'
+]]
+        else
+            local l = layout.fit(w, h)
+            screen.draw_video(self.obj, l.x1, l.y1, l.x2, l.y2)
+        end
+    end;
+    stop = function(self)
+        if self.obj then
+            self.obj:dispose()
+            self.obj = nil
+        end
+    end;
+}
+
 local function Playlist()
     local items = {}
     local total_duration = 0
@@ -299,6 +347,8 @@ local function Playlist()
                 setmetatable(item, {__index = Image})
             elseif item.filetype == "video" then
                 setmetatable(item, {__index = Video})
+            elseif item.filetype == "video_hevc" then
+                setmetatable(item, {__index = VideoHEVC})
             else
                 error "unsupported filetype"
             end
@@ -446,9 +496,10 @@ elseif CONTENTS['config.json'] then
         local items = {}
         for idx = 1, #config.playlist do
             local item = config.playlist[idx]
+            local is_hevc = item.file.metadata and item.file.metadata.format == "hevc"
             items[#items+1] = {
                 filename = item.file.asset_name,
-                filetype = item.file.type,
+                filetype = is_hevc and "video_hevc" or item.file.type,
                 duration = item.duration,
             }
         end

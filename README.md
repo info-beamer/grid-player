@@ -50,6 +50,7 @@ of info-beamer hosted.
 ## Version 6.1
 
  * Fixed streaming on Pi4
+ * Added HEVC (4K!) video support
 
 ## Version 6.0
 
