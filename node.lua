@@ -392,8 +392,7 @@ local function Stream()
         local state, w, h = vid:state()
         if state == "loaded" then
             local l = layout.fit(w, h)
-            vid:source(l.source.x1, l.source.y1, l.source.x2, l.source.y2)
-            screen.draw_video(vid, l.screen.x1, l.screen.y1, l.screen.x2, l.screen.y2)
+            screen.draw_video(vid, l.x1, l.y1, l.x2, l.y2)
         elseif state == "finished" or state == "error" then
             stop()
             start()
