@@ -47,6 +47,10 @@ Have a look at the included [STANDALONE.md](STANDALONE.md)
 file to read more about how you can use this package outside
 of info-beamer hosted.
 
+## Version 6.1
+
+ * Fixed streaming on Pi4
+
 ## Version 6.0
 
  * Now runs on the Pi4

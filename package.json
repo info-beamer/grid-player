@@ -7,5 +7,5 @@
         "outside_sources": true
     },
     "platforms": ["pi/epoch-1", "pi/epoch-2"],
-    "version": "6.0"
+    "version": "6.1"
 }
