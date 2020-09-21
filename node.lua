@@ -224,11 +224,13 @@ local Video = {
 ]]
         else
             local l = layout.fit(w, h)
+            self.obj:layer(1)
             screen.draw_video(self.obj, l.x1, l.y1, l.x2, l.y2)
         end
     end;
     stop = function(self)
         if self.obj then
+            self.obj:layer(-1)
             self.obj:dispose()
             self.obj = nil
         end
@@ -266,11 +268,13 @@ local VideoHEVC = {
 ]]
         else
             local l = layout.fit(w, h)
+            self.obj:layer(1)
             screen.draw_video(self.obj, l.x1, l.y1, l.x2, l.y2)
         end
     end;
     stop = function(self)
         if self.obj then
+            self.obj:layer(-1)
             self.obj:dispose()
             self.obj = nil
         end
