@@ -3,9 +3,9 @@ gl.setup(NATIVE_WIDTH, NATIVE_HEIGHT)
 
 util.no_globals()
 
--- Start preloading images this many second before
+-- Start preloading images/videos this many second before
 -- they are displayed.
-local PREPARE_TIME = 1 -- seconds
+local PREPARE_TIME = 1.5 -- seconds
 
 -- There is only one HEVC decoder slot. So videos
 -- cannot be preloaded. Instead we reserve the
