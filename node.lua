@@ -188,7 +188,10 @@ local Image = {
     end;
     tick = function(self, now)
         local state, w, h = self.obj:state()
-        if state == "error" then
+        if state == "loading" then
+            print "WARNING: lost image frame. image not loaded in time."
+        elseif state == "error" then
+            font:write(10, HEIGHT-18, w, 8, 1,1,1,.3)
             print(string.format("Cannot load image: %s", w))
         else
             local l = layout.fit(w, h)
@@ -219,13 +222,11 @@ local Video = {
         self.obj:start()
         local state, w, h = self.obj:state()
 
-        if state ~= "loaded" and state ~= "finished" then
-            print[[
-
-.------------------------------------------------------------.
-  WARNING: lost video frame. video is most likely out of sync.
-'------------------------------------------------------------'
-]]
+        if state == "loading" then
+            print "WARNING: lost video frame. video is most likely out of sync."
+        elseif state == "error" then
+            font:write(10, HEIGHT-18, w, 8, 1,1,1,.3)
+            print(string.format("Cannot load video: %s", w))
         else
             local l = layout.fit(w, h)
             self.obj:layer(1)
@@ -263,13 +264,11 @@ local VideoHEVC = {
         self.obj:start()
         local state, w, h = self.obj:state()
 
-        if state ~= "loaded" and state ~= "finished" then
-            print[[
-
-.------------------------------------------------------------.
-  WARNING: lost video frame. video is most likely out of sync.
-'------------------------------------------------------------'
-]]
+        if state == "loading" then
+            print "WARNING: lost video frame. video is most likely out of sync."
+        elseif state == "error" then
+            font:write(10, HEIGHT-18, w, 8, 1,1,1,.3)
+            print(string.format("Cannot load video: %s", w))
         else
             local l = layout.fit(w, h)
             self.obj:layer(1)
