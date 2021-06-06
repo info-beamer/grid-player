@@ -188,7 +188,9 @@ local Image = {
     end;
     tick = function(self, now)
         local state, w, h = self.obj:state()
-        if state == "loaded" then
+        if state == "error" then
+            print(string.format("Cannot load image: %s", w))
+        else
             local l = layout.fit(w, h)
             screen.draw_image(self.obj, l.x1, l.y1, l.x2, l.y2)
         end
