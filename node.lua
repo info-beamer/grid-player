@@ -188,8 +188,10 @@ local Image = {
     end;
     tick = function(self, now)
         local state, w, h = self.obj:state()
-        local l = layout.fit(w, h)
-        screen.draw_image(self.obj, l.x1, l.y1, l.x2, l.y2)
+        if state == "loaded" then
+            local l = layout.fit(w, h)
+            screen.draw_image(self.obj, l.x1, l.y1, l.x2, l.y2)
+        end
     end;
     stop = function(self)
         if self.obj then
