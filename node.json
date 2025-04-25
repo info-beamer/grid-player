@@ -8,18 +8,25 @@
         "empty.png",
         "package-header.jpg"
     ],
-    "options": [
-    {
+    "expand_schedules": true,
+    "options": [{
         "title": "What to display",
-        "type": "section"
+        "type": "section",
+        "name": "sources",
+        "toggles": [{
+            "key": "streaming",
+            "name": "Use experimental streaming",
+            "help": "Play a network based stream instead of a playlist."
+        }]
     }, {
         "title": "Playlist",
         "name": "playlist",
         "type": "list",
         "itemname": "Item",
+        "condition": ["!", ["config", "sources", "streaming"]],
         "items": [{
             "title": "Asset",
-            "ui_width": 5,
+            "ui_width": 6,
             "name": "file",
             "type": "resource",
             "valid": ["image", "video"],
@@ -27,17 +34,24 @@
             "default": "empty.png"
         }, {
             "title": "Play time",
-            "ui_width": 3,
+            "ui_width": 2,
             "name": "duration",
             "type": "duration",
             "hint": "How long should this item be displayed on screen. For videos, use their duration",
             "default": 5
+        }, {
+            "title": "Schedule",
+            "name": "schedule",
+            "ui_width": 4,
+            "type": "schedule",
+            "default": "always"
         }]
     }, {
         "title": "Experimental: Multicast Stream Source",
         "name": "stream",
         "type": "string",
         "doc_link": true,
+        "condition": ["config", "sources", "streaming"],
         "placeholder": "Url of your stream. Usually pointing to an .sdp file. Leave empty to play the playlist configured above.",
         "default": ""
     },
@@ -116,8 +130,8 @@
         "type": "list",
         "itemname": "Device",
         "items": [{
-            "title": "Grid X Position",
-            "ui_width": 3,
+            "title": "X Position",
+            "ui_width": 2,
             "hint": "Horizontal position within the grid. Must be between 1 and *Grid Width* specified above. 1 is the left-most screen.",
             "name": "x",
             "type": "select",
@@ -131,8 +145,8 @@
             ],
             "default": 1
         }, {
-            "title": "Grid Y Position",
-            "ui_width": 3,
+            "title": "Y Position",
+            "ui_width": 2,
             "hint": "Vertical position within the grid. Must be between 1 and *Grid Height* specified above. 1 is the top-most screen.",
             "name": "y",
             "type": "select",
@@ -147,9 +161,17 @@
             "default": 1
         }, {
             "title": "Device",
-            "ui_width": 6,
+            "ui_width": 5,
             "name": "serial",
             "type": "device"
+        }, {
+            "title": "Overlay",
+            "ui_width": 3,
+            "name": "overlay",
+            "type": "resource",
+            "valid": ["image"],
+            "features": ["image4k"],
+            "default": "empty.png"
         }]
     }],
     "presets": {
