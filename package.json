@@ -7,7 +7,7 @@
         "outside_sources": true
     },
     "platforms": ["pi/epoch-1", "pi/epoch-2"],
-    "version": "6.3",
+    "version": "7.0",
     "nesting": {
         "parents": ["top-level"],
         "childs": []

@@ -47,6 +47,16 @@ Have a look at the included [STANDALONE.md](STANDALONE.md)
 file to read more about how you can use this package outside
 of info-beamer hosted.
 
+## Version 7.0
+
+Big rework:
+
+ * Added per-item scheduling.
+ * Added target latency for streaming. In combination with multicast streams
+   this allows playback across multiple devices to sync up after some seconds.
+ * Added option to overlay an image on each display. This allows masking content
+   for overlapping projectors.
+
 ## Version 6.3
 
  * Updated to also allow 4K images

@@ -3,6 +3,18 @@ gl.setup(NATIVE_WIDTH, NATIVE_HEIGHT)
 
 util.no_globals()
 
+local need_hevc_workaround = not sys.provides "kms"
+
+-- Target latency between incoming stream package pts and pts of video
+-- frame on the display. For low latency streams like rtp multicast this
+-- will eventually sync up all displays.
+--
+-- Example ffmpeg cmd:
+--
+-- ffmpeg -s 1280x720 -f x11grab -i :0.0+0,0 -vcodec libx264 \
+--    -preset ultrafast -f mpegts -pix_fmt yuv420p udp://236.0.0.1:2000
+local TARGET_LATENCY = 0.3
+
 -- Start preloading images/videos this many second before
 -- they are displayed.
 local PREPARE_TIME = 1.5 -- seconds
@@ -17,8 +29,11 @@ local HEVC_LOAD_TIME = 0.5 -- seconds
 
 local json = require "json"
 local matrix = require "matrix"
-local font = resource.load_font "silkscreen.ttf"
 local min, max = math.min, math.max
+
+local font = resource.load_font "silkscreen.ttf"
+local overlay
+local loaded_overlay
 
 local function clamp(v, min, max)
     return math.max(min, math.min(max, v))
@@ -26,6 +41,38 @@ end
 
 local function round(v)
     return math.floor(v+.5)
+end
+
+local function printf(fmt, ...)
+    return print(string.format(fmt, ...))
+end
+
+local function expand_schedule(config, schedule)
+    if schedule == 'always' or schedule == 'never' then
+        return schedule
+    end
+    return config.__schedules.expanded[schedule+1]
+end
+
+local function is_schedule_active_at(schedule, probe_time)
+    if schedule == "always" then
+        return true
+    elseif schedule == "never" then
+        return false
+    end
+    local probe_time = os.time()
+    if probe_time < 10000000 then
+        return false -- no valid system time, don't schedule
+    end
+    for _, range in ipairs(schedule) do
+        local starts, duration = unpack(range)
+        if starts > probe_time then
+            break
+        elseif probe_time < starts + duration then
+            return true
+        end
+    end
+    return false
 end
 
 local function Layout(screen)
@@ -172,6 +219,15 @@ elseif CONTENTS['config.json'] then
             local device = config.devices[idx]
             if device.serial == serial then
                 layout.set_grid_pos(device.x, device.y)
+                if device.overlay.asset_id == "empty" then
+                    overlay = nil
+                else
+                    local asset_name = device.overlay.asset_name
+                    if not overlay or loaded_overlay ~= asset_name then
+                        overlay = resource.load_image(asset_name)
+                        loaded_overlay = asset_name
+                    end
+                end
             end
         end
     end)
@@ -180,19 +236,16 @@ else
 end
 
 local Image = {
-    slot_time = function(self)
-        return self.duration
-    end;
     prepare = function(self)
         self.obj = resource.load_image(self.file:copy())
     end;
-    tick = function(self, now)
+    tick = function(self)
         local state, w, h = self.obj:state()
         if state == "loading" then
             print "WARNING: lost image frame. image not loaded in time."
         elseif state == "error" then
             font:write(10, HEIGHT-18, w, 8, 1,1,1,.3)
-            print(string.format("Cannot load image: %s", w))
+            printf("Cannot load image: %s", w)
         else
             local l = layout.fit(w, h)
             screen.draw_image(self.obj, l.x1, l.y1, l.x2, l.y2)
@@ -207,15 +260,13 @@ local Image = {
 }
 
 local Video = {
-    slot_time = function(self)
-        return self.duration
-    end;
     prepare = function(self)
         self.obj = resource.load_video{
-            file = self.file:copy();
+            file = self.file:copy(),
             raw = true,
-            paused = true;
-            audio = audio;
+            paused = true,
+            looped = true,
+            audio = audio,
         }
     end;
     tick = function(self, now)
@@ -226,16 +277,16 @@ local Video = {
             print "WARNING: lost video frame. video is most likely out of sync."
         elseif state == "error" then
             font:write(10, HEIGHT-18, w, 8, 1,1,1,.3)
-            print(string.format("Cannot load video: %s", w))
+            printf("Cannot load video: %s", w)
         else
             local l = layout.fit(w, h)
-            self.obj:layer(1)
+            self.obj:layer(-1)
             screen.draw_video(self.obj, l.x1, l.y1, l.x2, l.y2)
         end
     end;
     stop = function(self)
         if self.obj then
-            self.obj:layer(-1)
+            self.obj:layer(-2)
             self.obj:dispose()
             self.obj = nil
         end
@@ -243,18 +294,16 @@ local Video = {
 }
 
 local VideoHEVC = {
-    slot_time = function(self)
-        return self.duration + HEVC_LOAD_TIME
-    end;
     prepare = function(self)
     end;
     tick = function(self, now)
         if not self.obj then
             self.obj = resource.load_video{
-                file = self.file:copy();
+                file = self.file:copy(),
                 raw = true,
-                paused = true;
-                audio = audio;
+                paused = true,
+                looped = true,
+                audio = audio,
             }
         end
         if now < self.t_start + HEVC_LOAD_TIME then
@@ -268,16 +317,16 @@ local VideoHEVC = {
             print "WARNING: lost video frame. video is most likely out of sync."
         elseif state == "error" then
             font:write(10, HEIGHT-18, w, 8, 1,1,1,.3)
-            print(string.format("Cannot load video: %s", w))
+            printf("Cannot load video: %s", w)
         else
             local l = layout.fit(w, h)
-            self.obj:layer(1)
+            self.obj:layer(-1)
             screen.draw_video(self.obj, l.x1, l.y1, l.x2, l.y2)
         end
     end;
     stop = function(self)
         if self.obj then
-            self.obj:layer(-1)
+            self.obj:layer(-2)
             self.obj:dispose()
             self.obj = nil
         end
@@ -285,133 +334,144 @@ local VideoHEVC = {
 }
 
 local function Playlist()
-    local items = {}
-    local total_duration = 0
-
-    local function calc_start(idx, now)
-        local item = items[idx]
-        local epoch_offset = now % total_duration
-        local epoch_start = now - epoch_offset
-
-        item.t_start = epoch_start + item.epoch_offset
-        if item.t_start - PREPARE_TIME < now then
-            item.t_start = item.t_start + total_duration
-        end
-        item.t_prepare = item.t_start - PREPARE_TIME
-        item.t_end = item.t_start + item:slot_time()
-        -- pp(item)
-    end
-
-    local function tick(now)
-        local num_running = 0
-        local next_running = 99999999999999
-
-        for idx = 1, #items do
-            local item = items[idx]
-            if item.t_prepare <= now and item.state == "waiting" then
-                print(now, "preparing", item.file)
-                item:prepare()
-                item.state = "prepared"
-            elseif item.t_start <= now and item.state == "prepared" then
-                print(now, "running", item.file)
-                item.state = "running"
-            elseif item.t_end <= now and item.state == "running" then
-                print(now, "resetting", item.file)
-                item:stop()
-                calc_start(idx, now)
-                item.state = "waiting"
-            end
-
-            next_running = min(next_running, item.t_start)
-
-            if item.state == "running" then
-                item:tick(now)
-                num_running = num_running + 1
-            end
-        end
-
-        if num_running == 0 then
-            local wait = next_running - now
-            font:write(10, HEIGHT-30, ("Waiting for sync %.1f"):format(wait), 24, 1,1,1,.5)
-        end
-    end
-
-    local function stop_all()
-        for idx = 1, #items do
-            local item = items[idx]
-            item:stop()
-        end
-    end
-
+    local all_items = {}
     local function set(new_items)
-        local now = os.time()
+        all_items = new_items
+    end
 
-        total_duration = 0
-        for idx = 1, #new_items do
-            local item = new_items[idx]
-            local filename = item.filename:lower()
-            if item.filetype == "image" then
-                setmetatable(item, {__index = Image})
-            elseif item.filetype == "video" then
-                setmetatable(item, {__index = Video})
-            elseif item.filetype == "video_hevc" then
-                setmetatable(item, {__index = VideoHEVC})
-            else
-                error "unsupported filetype"
+    local function make_instance(item)
+        local instance = {}
+        for k, v in pairs(item) do
+            instance[k] = v
+        end
+        setmetatable(instance, {__index = ({
+            image = Image,
+            video = Video,
+            video_hevc = VideoHEVC,
+        })[instance.filetype]})
+        return instance
+    end
+
+    local function get_next(test_t, back)
+        local scheduled_items = {}
+        for idx, item in ipairs(all_items) do
+            if is_schedule_active_at(item.schedule, test_t) then
+                scheduled_items[#scheduled_items+1] = item
             end
+        end
+
+        if #scheduled_items == 0 then
+            scheduled_items[1] = {
+                file = resource.open_file "blank.png",
+                filetype = "image",
+                duration = 2,
+                schedule = "always",
+            }
+        end
+
+        local total_duration = 0
+        for idx, item in ipairs(scheduled_items) do
             item.epoch_offset = total_duration
-            item.state = "waiting"
-            item.file = resource.open_file(item.filename)
-            total_duration = total_duration + item:slot_time()
+            local duration = item.duration
+            total_duration = total_duration + item.duration
         end
 
-        stop_all()
+        local epoch_offset = test_t % total_duration
+        local epoch_start = test_t - epoch_offset
 
-        items = new_items
-        for idx = 1, #new_items do
-            calc_start(idx, now)
+        local next_start, next_idx
+        for idx, item in ipairs(scheduled_items) do
+            local start_t = epoch_start + item.epoch_offset
+            if start_t >= test_t then
+                next_start = start_t
+                next_idx = idx
+                break
+            end
         end
 
-        node.gc()
+        if not next_start then
+            -- None matched. This only happens if the test
+            -- time is after the last item's start time (so
+            -- the item is playing right now). In that
+            -- case the next item will be the first again.
+            next_start = epoch_start + total_duration
+            next_idx = 1
+        end
+
+        -- If requested, walk backwards in time, adjusting start
+        -- time and item.
+        back = back or 0
+        while back > 0 do
+            next_idx = (next_idx - 2) % #scheduled_items + 1
+            next_start = next_start - scheduled_items[next_idx].duration
+            back = back - 1
+        end
+
+        return next_start, make_instance(scheduled_items[next_idx])
     end
 
     return {
         set = set;
+        get_next = get_next;
+    }
+end
+
+local function PlaylistPlayer(playlist)
+    local cur, nxt
+    local switch
+    local reschedule = os.time()
+
+    local function tick(now)
+        if not nxt and now >= reschedule then
+            if not cur then
+                -- While starting, check if the currently playing item
+                -- would be an image. If so, allow scheduling it late.
+                local past_switch, maybe_nxt = playlist.get_next(reschedule, 1)
+                if maybe_nxt.filetype == "image" then
+                    printf('late starting image. missed %.3fs', now - past_switch)
+                    switch = past_switch
+                    nxt = maybe_nxt
+                end
+            end
+            if not nxt then
+                switch, nxt = playlist.get_next(reschedule)
+            end
+            printf('next in %.5fs', switch - now)
+            pp(nxt)
+            nxt:prepare()
+        end
+
+        if nxt and switch and now >= switch then
+            print('switch to')
+            pp(nxt)
+            local old = cur
+            cur = nxt
+            nxt = nil
+            reschedule = max(now, switch + cur.duration - PREPARE_TIME)
+            if old then
+                old:stop()
+            end
+        end
+
+        if cur then
+            cur:tick(now)
+        else
+            local wait = switch - now
+            font:write(10, HEIGHT-30, ("Waiting for sync %.1f"):format(wait), 24, 1,1,1,.5)
+        end
+    end
+
+    return {
         tick = tick;
     }
 end
 
 local playlist = Playlist()
+local playlist_player = PlaylistPlayer(playlist)
 
-local function prepare_playlist(playlist)
-    if #playlist >= 2 then
-        return playlist
-    elseif #playlist == 1 then
-        -- only a single item? Copy it
-        local item = playlist[1]
-        playlist[#playlist+1] = {
-            filename = item.filename,
-            filetype = item.filetype,
-            duration = item.duration,
-        }
-    else
-        playlist[#playlist+1] = {
-            filename = "blank.png",
-            filetype = "image",
-            duration = 2,
-        }
-        playlist[#playlist+1] = {
-            filename = "blank.png",
-            filetype = "image",
-            duration = 2,
-        }
-    end
-    return playlist
-end
 
 local function Stream()
-    local vid
-    local url
+    local vid, url, latency, speed
 
     local function stop()
         if vid then
@@ -426,6 +486,8 @@ local function Stream()
             raw = true,
             audio = audio,
         }
+        latency = 0
+        speed = 1
     end
 
     local function set(stream_url)
@@ -450,6 +512,23 @@ local function Stream()
         if state == "loaded" then
             local l = layout.fit(w, h)
             screen.draw_video(vid, l.x1, l.y1, l.x2, l.y2)
+
+            if vid.buffer then
+                latency = 0.98 * latency + 0.02 * vid:buffer()
+                if (speed > 1 and latency < TARGET_LATENCY) or
+                   (speed < 1 and latency > TARGET_LATENCY) then
+                   speed = 1
+                elseif latency > TARGET_LATENCY * 1.1 then
+                    speed = 1.01
+                elseif latency < TARGET_LATENCY * 0.9 then
+                    speed = 0.99
+                end
+                printf(
+                    "latency=%.5fs, target=%7.3f%% => speed %4.2fx",
+                    latency, 100 / TARGET_LATENCY * latency, speed
+                )
+                vid:speed(speed)
+            end
         elseif state == "finished" or state == "error" then
             stop()
             start()
@@ -491,37 +570,56 @@ if CONTENTS['playlist.txt'] then
                 ))
             end
             items[#items+1] = {
-                filename = filename;
-                filetype = type_from_filename(filename);
-                duration = tonumber(duration);
+                file = resource.open_file(filename),
+                filetype = type_from_filename(filename),
+                duration = tonumber(duration),
+                schedule = "always",
             }
         end
-        playlist.set(prepare_playlist(items))
+        playlist.set(items)
+        stream.set("")
     end)
 elseif CONTENTS['config.json'] then
     util.json_watch("config.json", function(config)
         local items = {}
-        for idx = 1, #config.playlist do
-            local item = config.playlist[idx]
-            local is_hevc = item.file.metadata and item.file.metadata.format == "hevc"
-            items[#items+1] = {
-                filename = item.file.asset_name,
-                filetype = is_hevc and "video_hevc" or item.file.type,
-                duration = item.duration,
-            }
+        local configured_playlist = config.playlist or {}
+        for idx, item in ipairs(configured_playlist) do
+            -- Older Pi4 based players could only have a single HEVC
+            -- decoder instance. This workaround uses a special player
+            -- that delays decoding by 0.5 seconds to allow a potential
+            -- ealier decoder to shut down first. This is no longer
+            -- needed on 2024 OS releases.
+            local hevc_workaround = (
+                need_hevc_workaround and
+                item.file.metadata and
+                item.file.metadata.format == "hevc"
+            )
+            if item.duration > 0 then
+                items[#items+1] = {
+                    file = resource.open_file(item.file.asset_name),
+                    filetype = hevc_workaround and "video_hevc" or item.file.type,
+                    duration = max(1, item.duration) + (hevc_workaround and HEVC_LOAD_TIME or 0),
+                    schedule = expand_schedule(config, item.schedule),
+                }
+            end
         end
-        playlist.set(prepare_playlist(items))
-        stream.set(config.stream)
+        playlist.set(items)
+        stream.set(config.stream or "")
     end)
 else
     error "no playlist.txt found. Please consult STANDALONE.md"
 end
 
 function node.render()
+    gl.clear(0, 0, 0, 0)
     screen.frame_setup()
     if stream.has_stream() then
         stream.tick()
+        -- TODO: Stop playlist video
     else
-        playlist.tick(os.time())
+        playlist_player.tick(os.time())
+    end
+    if overlay then
+        overlay:draw(0, 0, WIDTH, HEIGHT)
     end
 end
